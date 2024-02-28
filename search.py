@@ -13,7 +13,7 @@ class DebankHistoryFetcher:
         caps = options.to_capabilities()
         caps['goog:loggingPrefs'] = {'performance': 'ALL'}
         driver = uc.Chrome(
-            headless=True,
+            headless=False,
             options=options,
             desired_capabilities=caps
         )
