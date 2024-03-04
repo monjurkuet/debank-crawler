@@ -9,12 +9,12 @@ class DebankHistoryFetcher:
         self.callback = callback
         self.task_queue = queue.Queue()
         self.workers = []
-        self.num_workers = 2  # You can adjust the number of worker threads as needed
-        self.page_view_limit = 2
+        self.num_workers = 4  # You can adjust the number of worker threads as needed
+        self.page_view_limit = 3
         # Initialize workers
         for _ in range(self.num_workers):
             worker = threading.Thread(target=self.worker_loop)
-            worker.daemon = True
+            worker.daemon = False
             worker.start()
             self.workers.append(worker)
             time.sleep(3)
@@ -45,12 +45,36 @@ class DebankHistoryFetcher:
         proxy_server = "127.0.0.1:16379"
         options.add_argument(f'--proxy-server={proxy_server}')
         return uc.Chrome(options=options, desired_capabilities=caps)
+    
+    def parse_logs(self, driver,logs, target_url):
+        for log in logs:
+            try:
+                resp_url = log["params"]["response"]["url"]
+                if target_url in resp_url:
+                    request_id = log["params"]["requestId"]
+                    response_body = driver.execute_cdp_cmd("Network.getResponseBody", {"requestId": request_id})
+                    response_json = json.loads(response_body['body'])
+                    return response_json
+            except Exception as e:
+                pass
+        return None
+    def clean_history(self, response_json):
+        history_list = response_json['data']['history_list']
+        history_list = [each_row for each_row in history_list if each_row['is_scam'] != True]
+        return history_list
     def fetch_data(self, driver, address):
         base_search_url = 'https://debank.com/profile/{}/history'
         driver.get(base_search_url.format(address))
+        print('navigated')
+        time.sleep(20)
         # Implement scraping logic here
-        # For simplicity, let's assume we're just returning a dummy response
-        return {'address': address, 'data': 'dummy data'}
+        logs_raw = driver.get_log("performance")
+        logs = [json.loads(lr["message"])["message"] for lr in logs_raw]
+        SEARCH_API = 'https://api.debank.com/history/list'
+        response_json = self.parse_logs(driver,logs, SEARCH_API)
+        if response_json:
+            history_list = self.clean_history(response_json)
+            return {'address': address, 'data': history_list}
     def close(self):
         # Stop workers
         for _ in range(self.num_workers):
@@ -68,7 +92,7 @@ def my_callback(address, data):
     print(f"Data for address {address}: {data}")
 
 debank = DebankHistoryFetcher(my_callback)
-for address in addresses[:4]:
+for address in addresses:
     debank.add_task(address)
 # You can add more tasks here
 # debank.add_task('another_address')
