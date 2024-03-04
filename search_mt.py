@@ -10,7 +10,7 @@ class DebankHistoryFetcher:
         self.task_queue = queue.Queue()
         self.workers = []
         self.num_workers = 4  # You can adjust the number of worker threads as needed
-        self.page_view_limit = 3
+        self.page_view_limit = 10
         # Initialize workers
         for _ in range(self.num_workers):
             worker = threading.Thread(target=self.worker_loop)
@@ -33,7 +33,17 @@ class DebankHistoryFetcher:
                     page_view_count = 1
                     driver.quit()
                     driver = self.get_new_driver()
-                data = self.fetch_data(driver, address)
+                retry=5
+                while retry>0:
+                    retry-=1
+                    data = self.fetch_data(driver, address)
+                    if data['data']==None:
+                        print('Retry with new driver')
+                        driver.quit()
+                        time.sleep(1)
+                        driver = self.get_new_driver()
+                    else:
+                        break
                 self.callback(address, data)
             except queue.Empty:
                 continue
@@ -46,35 +56,53 @@ class DebankHistoryFetcher:
         options.add_argument(f'--proxy-server={proxy_server}')
         return uc.Chrome(options=options, desired_capabilities=caps)
     
-    def parse_logs(self, driver,logs, target_url):
-        for log in logs:
-            try:
-                resp_url = log["params"]["response"]["url"]
-                if target_url in resp_url:
-                    request_id = log["params"]["requestId"]
-                    response_body = driver.execute_cdp_cmd("Network.getResponseBody", {"requestId": request_id})
-                    response_json = json.loads(response_body['body'])
-                    return response_json
-            except Exception as e:
-                pass
-        return None
+    def parse_logs(self, driver,target_url):
+        # keep checking for 10 secs until api request is intercepted
+        check_time=10
+        wait_time_each_iter=2
+        while check_time>0:
+            check_time-=1
+            time.sleep(wait_time_each_iter)
+            logs_raw = driver.get_log("performance")
+            logs = [json.loads(lr["message"])["message"] for lr in logs_raw]
+            for log in logs:
+                try:
+                    resp_url = log["params"]["response"]["url"]
+                    if target_url in resp_url:
+                        request_id = log["params"]["requestId"]
+                        response_body = driver.execute_cdp_cmd("Network.getResponseBody", {"requestId": request_id})
+                        response_json = json.loads(response_body['body'])
+                        return response_json
+                except Exception as e:
+                    response_json=None
+            if response_json:
+                break
+            else:
+                print('Checking network logs.....')
+        return response_json
     def clean_history(self, response_json):
-        history_list = response_json['data']['history_list']
-        history_list = [each_row for each_row in history_list if each_row['is_scam'] != True]
+        try:
+            history_list = response_json['data']['history_list']
+            history_list = [each_row for each_row in history_list if each_row['is_scam'] != True]
+        except Exception as e:
+            print(e)
+            history_list=None
         return history_list
     def fetch_data(self, driver, address):
         base_search_url = 'https://debank.com/profile/{}/history'
         driver.get(base_search_url.format(address))
-        print('navigated')
-        time.sleep(20)
-        # Implement scraping logic here
-        logs_raw = driver.get_log("performance")
-        logs = [json.loads(lr["message"])["message"] for lr in logs_raw]
-        SEARCH_API = 'https://api.debank.com/history/list'
-        response_json = self.parse_logs(driver,logs, SEARCH_API)
-        if response_json:
-            history_list = self.clean_history(response_json)
-            return {'address': address, 'data': history_list}
+        print('Checking : ',address)
+        if "It looks like you're checking an incorrect address" in driver.page_source:
+            history_list='incorrect_address'
+        else:
+            # Implemented scraping logic here
+            SEARCH_API = 'https://api.debank.com/history/list'
+            response_json = self.parse_logs(driver,SEARCH_API)
+            if response_json:
+                history_list = self.clean_history(response_json)
+            else:
+                history_list=None
+        return {'address': address, 'data': history_list}
     def close(self):
         # Stop workers
         for _ in range(self.num_workers):
