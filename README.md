@@ -13,7 +13,7 @@ cd multitor
 multitor --init 2 --user debian-tor --socks-port 9000 --control-port 9900 --proxy privoxy --haproxy
 
 
-Requirements
+# Requirements
 multitor uses external utilities to be installed before running:
 
 tor
