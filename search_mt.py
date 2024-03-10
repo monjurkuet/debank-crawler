@@ -1,5 +1,7 @@
 import threading
 import queue
+import threading
+import queue
 import undetected_chromedriver as uc
 import json
 import time
@@ -196,6 +198,7 @@ class DebankHistoryFetcher:
         else:
             # Implemented scraping logic here
             SEARCH_API = 'https://api.debank.com/history/list'
+            response_json = self.parse_logs(driver,SEARCH_API)
             response_json = self.parse_logs(driver,SEARCH_API)
             if response_json:
                 history_list = self.clean_history(response_json) # filter history
