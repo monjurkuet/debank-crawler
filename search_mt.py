@@ -194,9 +194,9 @@ class DebankHistoryFetcher:
             if tr_in:
                 for each_tr in tr_in:
                     try:
-                        each_tr['total_usd'] = each_tr.pop('price')
+                        each_tr['total_usd'] = each_tr['price']*each_tr['amount']
                     except:
-                        pass
+                        each_tr['total_usd']=None
                     token_id=each_tr['token_id']
                     each_tr['token_name']=next((token['token_name'] for token in full_data if token['token_id'] == token_id), None)
                     tr_in_final.append(each_tr)
@@ -204,9 +204,9 @@ class DebankHistoryFetcher:
             if tr_out:
                 for each_tr in tr_out:
                     try:
-                        each_tr['total_usd'] = each_tr.pop('price')
+                        each_tr['total_usd'] = each_tr['price']*each_tr['amount']
                     except:
-                        pass
+                        each_tr['total_usd']=None
                     token_id=each_tr['token_id']
                     each_tr['token_name']=next((token['token_name'] for token in full_data if token['token_id'] == token_id), None)
                     tr_out_final.append(each_tr)
