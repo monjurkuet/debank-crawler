@@ -128,9 +128,10 @@ class DebankHistoryFetcher:
                 tx_hash=each_tx['id']
                 function_=each_tx['tx']['name']
                 protocol=each_tx['project_id']
+                protocol_address=each_tx['other_addr']
                 tr_in=each_tx['receives']
                 tr_out=each_tx['sends']
-                data={'tx_timestamp':tx_timestamp,'chain':chain,'tx_hash':tx_hash,'function_':function_,'protocol':protocol,'tr_in':tr_in,'tr_out':tr_out}
+                data={'tx_timestamp':tx_timestamp,'chain':chain,'tx_hash':tx_hash,'function_':function_,'protocol':protocol,'protocol_address':protocol_address,'tr_in':tr_in,'tr_out':tr_out}
                 final_data.append(data)
         else:
             pass
