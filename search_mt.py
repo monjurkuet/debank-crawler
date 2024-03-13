@@ -112,7 +112,7 @@ class DebankHistoryFetcher:
                         return response_json
                 except Exception as e:
                     response_json = None
-                    print(e)
+                    #print(e)
             if response_json:
                 break
             else:
@@ -166,46 +166,56 @@ class DebankHistoryFetcher:
                 protocol_image_url=None
             data={'token_name':token_name,'token_id':token_id,'protocol_image_url':protocol_image_url}  
             full_data.append(data)
+        # extract tx hash url,protocol name, protocol image url from webpage
+        html_protocol=driver.find_elements('xpath','//div[contains(@class, "History_tableLine")]')
+        additional_data=[]
+        for i in html_protocol:
+            try:
+                tx_hash_url=i.find_element('xpath','.//div[contains(@class, "History_txStatus")]//a').get_attribute('href')
+            except:
+                tx_hash_url=None
+            try:
+                protocol_clean=i.find_element('xpath','.//span[contains(@class, "TransactionAction_projectName")]').text
+            except:
+                protocol_clean=None
+            try:
+                protocol_image_url=i.find_element('xpath','.//div[contains(@class, "TransactionAction_transactionAction")]//img').get_attribute('src')
+            except:
+                protocol_image_url=None
+            data={'tx_hash_url':tx_hash_url,'protocol_clean':protocol_clean,'protocol_image_url':protocol_image_url}  
+            additional_data.append(data)
         # Match data from api with data from html
         history_list_final=[]
         for each_history in history_list:
+            tx_hash=each_history['tx_hash']
             tr_in=each_history['tr_in']
             tr_out=each_history['tr_out']
             tr_in_final=[]
             if tr_in:
                 for each_tr in tr_in:
+                    try:
+                        each_tr['total_usd'] = each_tr.pop('price')
+                    except:
+                        pass
                     token_id=each_tr['token_id']
                     each_tr['token_name']=next((token['token_name'] for token in full_data if token['token_id'] == token_id), None)
-                    each_tr['protocol_image_url']=next((token['protocol_image_url'] for token in full_data if token['token_id'] == token_id), None)
                     tr_in_final.append(each_tr)
             tr_out_final=[]
             if tr_out:
                 for each_tr in tr_out:
+                    try:
+                        each_tr['total_usd'] = each_tr.pop('price')
+                    except:
+                        pass
                     token_id=each_tr['token_id']
                     each_tr['token_name']=next((token['token_name'] for token in full_data if token['token_id'] == token_id), None)
-                    each_tr['protocol_image_url']=next((token['protocol_image_url'] for token in full_data if token['token_id'] == token_id), None)
                     tr_out_final.append(each_tr)
             each_history['tr_in']=tr_in_final
             each_history['tr_out']=tr_out_final
+            each_history['tx_hash_url']=next((tx['tx_hash_url'] for tx in additional_data if tx_hash in tx['tx_hash_url']), None)
+            each_history['protocol_clean']=next((tx['protocol_clean'] for tx in additional_data if tx_hash in tx['tx_hash_url']), None)
+            each_history['protocol_image_url']=next((tx['protocol_image_url'] for tx in additional_data if tx_hash in tx['tx_hash_url']), None)
             history_list_final.append(each_history)
-        # extract tx-data from webpage
-        html_protocol=driver.find_elements('xpath','//div[@class="dbChangeTokenList"]//div[@data-token-chain]')
-        full_data=[]
-        for i in html_history:
-            try:
-                token_name=i.get_attribute('data-name')
-            except:
-                token_name=None
-            try:
-                token_id=i.get_attribute('data-id')
-            except:
-                token_id=None
-            try:
-                protocol_image_url=i.find_element('xpath','./div/img').get_attribute('src')
-            except:
-                protocol_image_url=None
-            data={'token_name':token_name,'token_id':token_id,'protocol_image_url':protocol_image_url}  
-            full_data.append(data)
         return history_list_final
 
     def fetch_data(self, driver, address):
@@ -241,13 +251,13 @@ def my_callback(_tuple: tuple):
 
 if __name__ == '__main__':
 
-    addresses=['0x9d17bb55b57b31329cf01aa7017948e398b277bc','0x786694b02f1d331be540e727f1f2a697c45b57e4','0x0edefa91e99da1eddd1372c1743a63b1595fc413',
+    addresses=['0x41bc7d0687e6cea57fa26da78379dfdc5627c56d','0x9d17bb55b57b31329cf01aa7017948e398b277bc','0x786694b02f1d331be540e727f1f2a697c45b57e4','0x0edefa91e99da1eddd1372c1743a63b1595fc413',
      '0x05bb279648e4e4cbcdecf2d4d6ec310999d444e7','0x65c76a684dbfd773bab8a7463e7498686bafd833','0x2fe9811e6b3cceb5c14cca6523f10ffdf4288af6',
      '0x7e4be95f871504778094060b5a12f43698cc7241','0xc8093288d89e494d1d0b41d2e598e58fe1e0eaf1','0x9d17bb55b57b31329cf01aa7017948e398b277bc']
 
 
     #addresses = ['0x4e5a83140d2a69ee421f9b00b92df9ee27d7dffa']
-    addresses=['0x41bc7d0687e6cea57fa26da78379dfdc5627c56d']
+    #addresses=['0x41bc7d0687e6cea57fa26da78379dfdc5627c56d']
 
 # Example usage:
     NUM_WORKERS = 1

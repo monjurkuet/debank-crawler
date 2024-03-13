@@ -64,7 +64,7 @@ def fetch_history_list():
     else:
         return None
 
-driver.get('https://debank.com/profile/0x4e5a83140d2a69ee421f9b00b92df9ee27d7dffa/history')
+driver.get('https://debank.com/profile/0x41bc7d0687e6cea57fa26da78379dfdc5627c56d/history')
 
 
 history_list = fetch_history_list()
