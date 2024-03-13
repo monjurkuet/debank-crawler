@@ -229,6 +229,7 @@ if __name__ == '__main__':
 
 
     #addresses = ['0x4e5a83140d2a69ee421f9b00b92df9ee27d7dffa']
+    addresses=['0x41bc7d0687e6cea57fa26da78379dfdc5627c56d']
 
 # Example usage:
     NUM_WORKERS = 1
@@ -238,8 +239,6 @@ if __name__ == '__main__':
     debank = DebankHistoryFetcher(my_callback, NUM_WORKERS, PAGE_VIEW_LIMIT, IS_EXIT_ON_COMPLETE)
     for address in addresses:
         debank.add_task((0, address))
-    # You can add more tasks here
-    # debank.add_task('another_address')
 
     # Close the DebankHistoryFetcher
     debank.close()
