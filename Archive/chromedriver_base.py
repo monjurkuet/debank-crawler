@@ -70,7 +70,7 @@ driver.get('https://debank.com/profile/0x4e5a83140d2a69ee421f9b00b92df9ee27d7dff
 history_list = fetch_history_list()
 
 def extract_additional_tx_data(driver,history_list):
-    # extract data from webpage
+    # extract tx-data from webpage
     html_history=driver.find_elements('xpath','//div[@class="dbChangeTokenList"]//div[@data-token-chain]')
     full_data=[]
     for i in html_history:

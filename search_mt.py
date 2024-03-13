@@ -112,6 +112,7 @@ class DebankHistoryFetcher:
                         return response_json
                 except Exception as e:
                     response_json = None
+                    print(e)
             if response_json:
                 break
             else:
@@ -147,7 +148,7 @@ class DebankHistoryFetcher:
         return history_list
     
     def extract_additional_tx_data(self,driver,history_list):
-        # extract data from webpage
+        # extract tx-data from webpage
         html_history=driver.find_elements('xpath','//div[@class="dbChangeTokenList"]//div[@data-token-chain]')
         full_data=[]
         for i in html_history:
@@ -187,6 +188,24 @@ class DebankHistoryFetcher:
             each_history['tr_in']=tr_in_final
             each_history['tr_out']=tr_out_final
             history_list_final.append(each_history)
+        # extract tx-data from webpage
+        html_protocol=driver.find_elements('xpath','//div[@class="dbChangeTokenList"]//div[@data-token-chain]')
+        full_data=[]
+        for i in html_history:
+            try:
+                token_name=i.get_attribute('data-name')
+            except:
+                token_name=None
+            try:
+                token_id=i.get_attribute('data-id')
+            except:
+                token_id=None
+            try:
+                protocol_image_url=i.find_element('xpath','./div/img').get_attribute('src')
+            except:
+                protocol_image_url=None
+            data={'token_name':token_name,'token_id':token_id,'protocol_image_url':protocol_image_url}  
+            full_data.append(data)
         return history_list_final
 
     def fetch_data(self, driver, address):
@@ -198,7 +217,6 @@ class DebankHistoryFetcher:
         else:
             # Implemented scraping logic here
             SEARCH_API = 'https://api.debank.com/history/list'
-            response_json = self.parse_logs(driver,SEARCH_API)
             response_json = self.parse_logs(driver,SEARCH_API)
             if response_json:
                 history_list = self.clean_history(response_json) # filter history
