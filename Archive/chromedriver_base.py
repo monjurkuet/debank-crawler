@@ -25,15 +25,23 @@ def parse_logs(logs, target_url):
             pass
     return None
 
-def parse_tx(history_list):
+def parse_tx(history_list,cex_dict):
         final_data=[]
         if history_list:
             for each_tx in history_list:
                 tx_timestamp=each_tx['time_at']
                 chain=each_tx['chain']
                 tx_hash=each_tx['id']
-                function_=each_tx['tx']['name']
-                protocol=each_tx['project_id']
+                if each_tx['cex_id']:
+                    for i in cex_dict:
+                        if each_tx['cex_id']==i:
+                            cex_data=cex_dict[i]
+                            if cex_data['is_deposit']:
+                               function_='Deposit' 
+                            protocol=cex_data['name']
+                else:    
+                    function_=each_tx['tx']['name']
+                    protocol=each_tx['project_id']
                 protocol_address=each_tx['other_addr']
                 tr_in=each_tx['receives']
                 tr_out=each_tx['sends']
@@ -47,12 +55,16 @@ def clean_history(response_json):
     try:
         history_list = response_json['data']['history_list']
         history_list = [each_row for each_row in history_list if each_row['is_scam'] != True]
+        if response_json['data']['cex_dict']:
+            cex_dict=response_json['data']['cex_dict']
+        else:
+            cex_dict=None
     except Exception as e:
         print(e)
         history_list=None
     if history_list:
-        history_list= parse_tx(history_list)
-    return history_list
+        history_list= parse_tx(history_list,cex_dict)
+    return history_list,cex_dict
 
 def fetch_history_list():
     logs_raw = driver.get_log("performance")
@@ -60,13 +72,13 @@ def fetch_history_list():
     SEARCH_API = 'https://api.debank.com/history/list'
     response_json = parse_logs(logs, SEARCH_API)
     if response_json:
-        history_list = clean_history(response_json)
-        return history_list
+        history_list,cex_dict = clean_history(response_json)
+        return history_list,cex_dict 
     else:
-        return None
+        return None,None
 
 
-def extract_additional_tx_data(driver,history_list):
+def extract_additional_tx_data(driver,history_list,cex_dict):
         # extract tx-data from webpage
         html_history=driver.find_elements('xpath','//div[@class="dbChangeTokenList"]//div[@data-token-chain]')
         full_data=[]
@@ -138,7 +150,7 @@ def extract_additional_tx_data(driver,history_list):
         return history_list_final
 
 
-driver.get('https://debank.com/profile/0x41bc7d0687e6cea57fa26da78379dfdc5627c56d/history')
-history_list = fetch_history_list()    
-history_list_final=extract_additional_tx_data(driver,history_list)
+driver.get('https://debank.com/profile/0x758e83c114e36a28ca1f31c4d2adb5ec7c04c578/history')
+history_list,cex_dict = fetch_history_list()    
+history_list_final=extract_additional_tx_data(driver,history_list,cex_dict)
                     

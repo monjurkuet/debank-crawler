@@ -95,7 +95,7 @@ class DebankHistoryFetcher:
     def parse_logs(self, driver, target_url):
         # keep checking for 10 secs until api request is intercepted
         check_time = 5
-        wait_time_each_iter = 2
+        wait_time_each_iter = 5
         response_json = None
         while check_time > 0:
             check_time -= 1
@@ -119,15 +119,24 @@ class DebankHistoryFetcher:
                 print('Checking network logs.....')
         return response_json
 
-    def parse_tx(self,history_list):
+    def parse_tx(self,history_list,cex_dict):
         final_data=[]
         if history_list:
             for each_tx in history_list:
                 tx_timestamp=each_tx['time_at']
                 chain=each_tx['chain']
                 tx_hash=each_tx['id']
-                function_=each_tx['tx']['name']
-                protocol=each_tx['project_id']
+                if each_tx['cex_id']:
+                    for i in cex_dict:
+                        if each_tx['cex_id']==i:
+                            cex_data=cex_dict[i]
+                            function_=each_tx['cate_id']
+                            protocol=cex_data['name']
+                else:    
+                    function_=each_tx['tx']['name']
+                    protocol=each_tx['project_id']
+                if each_tx['cate_id']:
+                    function_=each_tx['cate_id']
                 protocol_address=each_tx['other_addr']
                 tr_in=each_tx['receives']
                 tr_out=each_tx['sends']
@@ -137,15 +146,19 @@ class DebankHistoryFetcher:
             pass
         return final_data
 
-    def clean_history(self, response_json):
+    def clean_history(self,response_json):
         try:
             history_list = response_json['data']['history_list']
             history_list = [each_row for each_row in history_list if each_row['is_scam'] != True]
+            if response_json['data']['cex_dict']:
+                cex_dict=response_json['data']['cex_dict']
+            else:
+                cex_dict=None
         except Exception as e:
             print(e)
             history_list=None
         if history_list:
-           history_list= self.parse_tx(history_list)
+            history_list= self.parse_tx(history_list,cex_dict)
         return history_list
     
     def extract_additional_tx_data(self,driver,history_list):
@@ -188,6 +201,7 @@ class DebankHistoryFetcher:
         # Match data from api with data from html
         history_list_final=[]
         for each_history in history_list:
+            #print(each_history)
             tx_hash=each_history['tx_hash']
             tr_in=each_history['tr_in']
             tr_out=each_history['tr_out']
@@ -229,9 +243,12 @@ class DebankHistoryFetcher:
             # Implemented scraping logic here
             SEARCH_API = 'https://api.debank.com/history/list'
             response_json = self.parse_logs(driver,SEARCH_API)
+            #print(response_json)
             if response_json:
                 history_list = self.clean_history(response_json) # filter history
+                #print(history_list)
                 history_list = self.extract_additional_tx_data(driver,history_list)
+                #print(history_list)
             else:
                 history_list=None
         return {'address': address, 'data': history_list}
@@ -258,7 +275,7 @@ if __name__ == '__main__':
 
 
     #addresses = ['0x4e5a83140d2a69ee421f9b00b92df9ee27d7dffa']
-    #addresses=['0x41bc7d0687e6cea57fa26da78379dfdc5627c56d']
+    addresses=['0x786694b02f1d331be540e727f1f2a697c45b57e4']
 
 # Example usage:
     NUM_WORKERS = 1
